@@ -154,8 +154,7 @@
                     if (thisDay.getMonth() !== date.getMonth()) {
                         $day.addClass('overlap');
                     }
-                    console.log(today.getTime())
-                    console.log(this.limit);
+
                     if(today.getTime() + this.limit < thisDay.getTime() || (this.preventPast && today.getTime() > thisDay.getTime()))
                         $day.addClass('disabled');
 
