@@ -25,5 +25,3 @@ or
 	preventPast: true,
 	limit: (60 * 60 * 24 * 7) * 1000 // a week
 })`
-
-Example: http://cs.txstate.edu/~bm1362/bootstrap-datepicker/
