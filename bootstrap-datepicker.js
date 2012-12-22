@@ -11,8 +11,6 @@
 
 !function ($) {
 
-    "use strict";
-
     var selector = '[data-datepicker]',
         all = [];
 
@@ -61,6 +59,12 @@
                 $nav = $('<div>').addClass('nav').append($months, $years),
                 $calendar = $("<div>").addClass('calendar'),
                 i;
+
+            // If the limit param is a Date obj, convert to an int offset in milliseconds. 
+            if(Object.prototype.toString.call(this.limit) === '[object Date]') {
+              var today = new Date();
+              this.limit = this.limit.getTime() - today.getTime();
+            }
 
             this.$month = $('.name', $months);
             this.$year = $('.name', $years);
@@ -132,7 +136,13 @@
                 rangeStart = this.rangeStart(date),
                 rangeEnd = this.rangeEnd(date),
                 num_days = this.daysBetween(rangeStart, rangeEnd),
-                ii;
+                ii,
+                today = new Date();
+
+                today.setHours(0);
+                today.setMinutes(0);
+                today.setSeconds(0);
+                today.setMilliseconds(0);
 
             if (!this.curMonth || !(this.curMonth.getFullYear() === newMonth.getFullYear() &&
                 this.curMonth.getMonth() === newMonth.getMonth())) {
@@ -150,6 +160,9 @@
                         $day.addClass('overlap');
                     }
 
+                    if(today.getTime() + this.limit < thisDay.getTime() || (this.preventPast && today.getTime() > thisDay.getTime()))
+                        $day.addClass('disabled');
+
                     this.$days.append($day);
                 }
 
@@ -158,6 +171,9 @@
 
                 $('div', this.$days).click($.proxy(function (e) {
                     var $targ = $(e.target);
+
+                    // If the class is disabled, cancel click event.
+                    if($targ.hasClass('disabled')) return;
 
                     // The date= attribute is used here to provide relatively fast
                     // selectors for setting certain date cells.
@@ -171,7 +187,7 @@
 
                 }, this));
 
-                $("[date='" + this.format(new Date()) + "']", this.$days).addClass('today');
+                $("[date='" + this.format(today) + "']", this.$days).addClass('today');
 
             }
 
@@ -204,10 +220,14 @@
 
             var offset = this.$el.offset();
 
-            this.$picker.css({
-                top: offset.top + this.$el.outerHeight() + 2,
-                left: offset.left
-            }).show();
+            if(!this.noOffset) {
+                this.$picker.css({
+                    top: offset.top + this.$el.outerHeight() + 2,
+                    left: offset.left
+                });
+            }
+
+            this.$picker.show();
 
             $('html').on('keydown', this.keyHandler);
         },
@@ -225,7 +245,8 @@
                 this.hide();
                 return;
             case 13:
-                // Enter selects the currently highlighted date.
+                // Enter selects the currently highlighted date, unless it is disabled.
+                if( $('.selected', this.$days).hasClass('disabled') ) return;
                 this.update(this.selectedDateStr);
                 this.hide();
                 break;
