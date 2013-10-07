@@ -7,8 +7,6 @@
  * Contributed by Scott Torborg - github.com/storborg
  * Loosely based on jquery.date_input.js by Jon Leighton, heavily updated and
  * rewritten to match bootstrap javascript approach and add UI features.
- * 
- * Bug fixes and improvements by Ramesh Nair (github.com/hiddentao)
  * =========================================================== */
 
 
