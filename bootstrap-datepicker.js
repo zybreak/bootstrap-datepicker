@@ -1,17 +1,18 @@
 /* ===========================================================
  * bootstrap-datepicker.js
  * http://github.com/zybreak/bootstrap-datepicker
+ * http://cs.txstate.edu/~bm1362/projects/bootstrap-datepicker/
  * ===========================================================
  *
  * Contributed by Scott Torborg - github.com/storborg
  * Loosely based on jquery.date_input.js by Jon Leighton, heavily updated and
  * rewritten to match bootstrap javascript approach and add UI features.
+ * 
+ * Bug fixes and improvements by Ramesh Nair (github.com/hiddentao)
  * =========================================================== */
 
 
 !function ($) {
-
-    "use strict";
 
     var selector = '[data-datepicker]',
         all = [];
@@ -58,9 +59,15 @@
         init: function () {
             var $months = this.nav('months', 1),
                 $years = this.nav('years', 12),
-                $nav = $('<div>').addClass('nav').append($months, $years),
-                $calendar = $("<div>").addClass('calendar'),
+                $nav = $('<div>').addClass('nav topbar').append($months, $years),
+                $calendar = $("<div>").addClass('calendar clearfix'),
                 i;
+
+            // If the limit param is a Date obj, convert to an int offset in milliseconds. 
+            if(Object.prototype.toString.call(this.limit) === '[object Date]') {
+              var today = new Date();
+              this.limit = this.limit.getTime() - today.getTime();
+            }
 
             this.$month = $('.name', $months);
             this.$year = $('.name', $years);
@@ -92,7 +99,14 @@
                     this.selectDate();
                 }, this));
 
-            this.selectDate();
+            if (this.startdate) {
+                this.selectDate(this.startday);
+            }else if(this.enddate){
+                this.selectDate(this.endday);
+            }else{
+                this.selectDate();
+            }
+
             this.hide();
         },
         nav: function (c, months) {
@@ -132,7 +146,13 @@
                 rangeStart = this.rangeStart(date),
                 rangeEnd = this.rangeEnd(date),
                 num_days = this.daysBetween(rangeStart, rangeEnd),
-                ii;
+                ii,
+                today = new Date();
+
+                today.setHours(0);
+                today.setMinutes(0);
+                today.setSeconds(0);
+                today.setMilliseconds(0);
 
             if (!this.curMonth || !(this.curMonth.getFullYear() === newMonth.getFullYear() &&
                 this.curMonth.getMonth() === newMonth.getMonth())) {
@@ -150,6 +170,9 @@
                         $day.addClass('overlap');
                     }
 
+                    if(today.getTime() + this.limit < thisDay.getTime() || (this.preventPast && today.getTime() > thisDay.getTime()))
+                        $day.addClass('disabled');
+
                     this.$days.append($day);
                 }
 
@@ -158,6 +181,9 @@
 
                 $('div', this.$days).click($.proxy(function (e) {
                     var $targ = $(e.target);
+
+                    // If the class is disabled, cancel click event.
+                    if($targ.hasClass('disabled')) return;
 
                     // The date= attribute is used here to provide relatively fast
                     // selectors for setting certain date cells.
@@ -171,7 +197,7 @@
 
                 }, this));
 
-                $("[date='" + this.format(new Date()) + "']", this.$days).addClass('today');
+                $("[date='" + this.format(today) + "']", this.$days).addClass('today');
 
             }
 
@@ -187,9 +213,13 @@
                 date = new Date();
             }
 
-            this.selectedDate = date;
-            this.selectedDateStr = this.format(this.selectedDate);
-            this.selectMonth(this.selectedDate);
+            // only if date has changed (in case we're also manually updating the datepicker when the input field value changes)
+            if (!this.selectedDate || this.selectedDate.getTime() !== date.getTime()) {
+              this.selectedDate = date;
+              this.selectedDateStr = this.format(this.selectedDate);
+              this.selectMonth(this.selectedDate);
+              this.update(this.selectedDateStr); // update the original input field
+            }
         },
         update: function (s) {
             this.$el.val(s).change();
@@ -204,15 +234,19 @@
 
             var offset = this.$el.offset();
 
-            this.$picker.css({
-                top: offset.top + this.$el.outerHeight() + 2,
-                left: offset.left
-            }).show();
+            // if(!this.noOffset) {
+            //     this.$picker.css({
+            //         top: offset.top + this.$el.outerHeight() + 2,
+            //         left: offset.left
+            //     });
+            // }
+
+            this.$picker.show();
 
             $('html').on('keydown', this.keyHandler);
         },
         hide: function () {
-            this.$picker.hide();
+            //this.$picker.hide();
             $('html').off('keydown', this.keyHandler);
         },
         keyHandler: function (e) {
@@ -225,7 +259,8 @@
                 this.hide();
                 return;
             case 13:
-                // Enter selects the currently highlighted date.
+                // Enter selects the currently highlighted date, unless it is disabled.
+                if( $('.selected', this.$days).hasClass('disabled') ) return;
                 this.update(this.selectedDateStr);
                 this.hide();
                 break;
